@@ -705,6 +705,10 @@ See the [API Reference](/api/reference/wxt/utils/content-script-ui/types/interfa
 
 ## Dealing with SPAs
 
+:::warning Experimental
+The `spa` option described below is experimental. It's opt-in, and its API may change or be removed in any minor release. Feedback is welcome in [#1029](https://github.com/wxt-dev/wxt/issues/1029).
+:::
+
 It is difficult to write content scripts for SPAs (single page applications) and websites using HTML5 history mode for navigation because content scripts are only ran on full page reloads. SPAs and websites that take advantage of HTML5 history mode **_do not perform a full reload when changing paths_**, and thus your content script isn't going to be ran when you expect it to be.
 
 Let's look at an example. Say you want to add a UI to YouTube when watching a video:
@@ -744,3 +748,70 @@ function mainWatch(ctx: ContentScriptContext) {
   mountUi(ctx);
 }
 ```
+
+But notice what this doesn't do: `mainWatch` is handed the _same_ `ctx` every time. That `ctx` is only invalidated when the extension reloads, so nothing you registered on it - listeners, timers, mounted UIs - is cleaned up when the user navigates to a different video, or away from `/watch` entirely. You have to manage that yourself.
+
+### `spa: true`
+
+Set `spa: true` and WXT does all of the above for you:
+
+```ts [wxt.config.ts]
+export default defineConfig({
+  experimental: {
+    spaContentScripts: true,
+  },
+});
+```
+
+```ts
+export default defineContentScript({
+  matches: ['*://*.youtube.com/watch*'],
+  spa: true,
+
+  main(ctx) {
+    // Called once per video, with a fresh `ctx` each time
+    mountUi(ctx);
+  },
+});
+```
+
+Here's what changes:
+
+1. **The script is registered for the whole origin.** WXT strips the path from your `matches`, so the manifest gets `*://*.youtube.com/*`. Your real patterns are evaluated at runtime instead.
+2. **`main` runs once per matching page**, with a new `ContentScriptContext` each time. If the initial URL doesn't match, it isn't called until the user navigates to one that does.
+3. **The previous context is aborted first**, and when navigating to a non-matching URL. Anything registered on it is cleaned up for you.
+
+`excludeMatches` moves to runtime too, so you can exclude paths the user can navigate away from.
+
+:::warning
+The script is now loaded on every page of the site, not just the ones you match. Keep the top level of your entrypoint cheap and do the expensive work inside `main`.
+:::
+
+### Controlling when `main` re-runs
+
+By default, `main` re-runs whenever the URL changes, ignoring the hash. So on YouTube, opening a different video (`?v=` changes) starts a new context, but clicking a link to `#comments` doesn't.
+
+Use `spa.key` when that's not the right granularity. Return the part of the URL you care about, and `main` only re-runs when it changes:
+
+```ts
+export default defineContentScript({
+  matches: ['*://github.com/*/*'],
+  spa: {
+    // "/facebook/react" - so switching between the Issues and Pull requests
+    // tabs of the same repo keeps the UI mounted, but opening a different repo
+    // remounts it.
+    key: (url) => url.pathname.split('/').slice(0, 3).join('/'),
+  },
+
+  main(ctx) {
+    mountUi(ctx);
+  },
+});
+```
+
+### Limitations
+
+- Isolated world only. `world: 'MAIN'` scripts don't get a `ContentScriptContext`.
+- `includeGlobs` and `excludeGlobs` can't be combined with `spa`. The browser applies globs when the document loads, so they'd stop the script loading on pages the user can navigate to. Use `matches`/`excludeMatches` instead.
+- URL changes use the [Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_API) where available, falling back to polling once a second. On the polling path `main` can run up to a second late. Either way it runs after the navigation commits, so `location.href` describes the new page.
+- Route changes aren't always enough. Sites that re-render without navigating can still remove the element your UI was anchored to. Use [`autoMount`](#mounting-ui-to-dynamic-element) or a `MutationObserver` inside `main`, which gets torn down with the context.

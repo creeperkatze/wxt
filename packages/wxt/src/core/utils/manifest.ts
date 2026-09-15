@@ -12,8 +12,10 @@ import { resolve } from 'path';
 import { getEntrypointBundlePath } from './entrypoints';
 import { ContentSecurityPolicy } from './content-security-policy';
 import {
+  getRegisteredMatches,
   hashContentScriptOptions,
   mapWxtOptionsToContentScript,
+  stripPathFromMatchPattern,
 } from './content-scripts';
 import { getPackageJson } from './package';
 import { normalizePath } from './paths';
@@ -409,7 +411,7 @@ function addEntrypoints(
     // at runtime
     if (wxt.config.command === 'serve' && wxt.config.manifestVersion === 3) {
       contentScripts.forEach((script) => {
-        script.options.matches?.forEach((matchPattern) => {
+        getRegisteredMatches(script.options)?.forEach((matchPattern) => {
           addHostPermission(manifest, matchPattern);
         });
       });
@@ -444,7 +446,7 @@ function addEntrypoints(
         (cs) => cs.options.registration === 'runtime',
       );
       runtimeContentScripts.forEach((script) => {
-        script.options.matches?.forEach((matchPattern) => {
+        getRegisteredMatches(script.options)?.forEach((matchPattern) => {
           addHostPermission(manifest, matchPattern);
         });
       });
@@ -645,17 +647,7 @@ function addHostPermission(
   manifest.host_permissions.push(hostPermission);
 }
 
-/**
- * - "<all_urls>" → "<all_urls>"
- * - "_://play.google.com/books/_" → "_://play.google.com/_"
- */
-export function stripPathFromMatchPattern(pattern: string) {
-  const protocolSepIndex = pattern.indexOf('://');
-  if (protocolSepIndex === -1) return pattern;
-
-  const startOfPath = pattern.indexOf('/', protocolSepIndex + 3);
-  return pattern.substring(0, startOfPath) + '/*';
-}
+export { stripPathFromMatchPattern } from './content-scripts';
 
 /**
  * Converts all MV3 web accessible resources to their MV2 forms. MV3 web

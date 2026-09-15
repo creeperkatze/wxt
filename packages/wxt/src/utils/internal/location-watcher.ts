@@ -24,10 +24,13 @@ export function createLocationWatcher(ctx: ContentScriptContext) {
       lastUrl = new URL(location.href);
 
       if (supportsNavigationApi) {
+        // Not `navigate`, which fires before the navigation commits, leaving
+        // `location.href` on the previous page. This also matches the polling
+        // fallback below, which is always post-commit.
         (globalThis as any).navigation.addEventListener(
-          'navigate',
-          (event: any) => {
-            const newUrl = new URL(event.destination.url);
+          'navigatesuccess',
+          () => {
+            const newUrl = new URL(location.href);
             if (newUrl.href === lastUrl.href) return;
             window.dispatchEvent(new WxtLocationChangeEvent(newUrl, lastUrl));
             lastUrl = newUrl;
