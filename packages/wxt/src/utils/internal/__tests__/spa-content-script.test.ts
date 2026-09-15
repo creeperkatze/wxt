@@ -163,6 +163,31 @@ describe('SPA Content Script', () => {
     expect(main).toHaveBeenCalledTimes(1);
   });
 
+  it('should re-run main when a custom spa.key changes', async () => {
+    setUrl('https://www.youtube.com/watch?v=1');
+    const { main, parentCtx, resolved } = setup({
+      matches: ['*://*.youtube.com/*'],
+      spa: { key: (url) => url.pathname },
+    });
+    await runSpaContentScript(parentCtx, resolved, 'test');
+
+    await navigate('https://www.youtube.com/playlist?list=1');
+
+    expect(main).toHaveBeenCalledTimes(2);
+  });
+
+  it('should not re-run main when the same URL is reported twice', async () => {
+    setUrl('https://www.youtube.com/watch?v=1');
+    const { main, parentCtx, resolved } = setup();
+    await runSpaContentScript(parentCtx, resolved, 'test');
+
+    // The polling fallback compares against its own `lastUrl`, but don't rely
+    // on that to avoid running `main` again for a page already mounted.
+    await navigate('https://www.youtube.com/watch?v=1');
+
+    expect(main).toHaveBeenCalledTimes(1);
+  });
+
   it('should apply excludeMatches at runtime', async () => {
     setUrl('https://www.youtube.com/watch?v=1');
     const { main, parentCtx, resolved } = setup({

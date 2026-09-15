@@ -93,6 +93,21 @@ describe('Content Script Utils', () => {
       expect(actual.excludeMatches).toBeUndefined();
     });
 
+    it('should not merge SPA scripts on the same origin when their other options differ', () => {
+      const hash1 = hashContentScriptOptions({
+        matches: ['*://*.youtube.com/watch*'],
+        spa: true,
+        runAt: 'document_start',
+      });
+      const hash2 = hashContentScriptOptions({
+        matches: ['*://*.youtube.com/playlist*'],
+        spa: true,
+        runAt: 'document_end',
+      });
+
+      expect(hash1).not.toBe(hash2);
+    });
+
     it('should hash two SPA scripts on the same origin identically so they share a manifest entry', () => {
       const hash1 = hashContentScriptOptions({
         matches: ['*://*.youtube.com/watch*'],
