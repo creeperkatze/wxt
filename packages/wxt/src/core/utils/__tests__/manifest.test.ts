@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { generateManifest, stripPathFromMatchPattern } from '../manifest';
+import { generateManifest } from '../manifest';
 import {
   fakeArray,
   fakeBackgroundEntrypoint,
@@ -2230,18 +2230,6 @@ describe('Manifest Utils', () => {
           ),
         );
       });
-    });
-  });
-
-  describe('stripPathFromMatchPattern', () => {
-    it.each([
-      ['<all_urls>', '<all_urls>'],
-      ['*://play.google.com/books/*', '*://play.google.com/*'],
-      ['*://*/*', '*://*/*'],
-      ['https://github.com/wxt-dev/*', 'https://github.com/*'],
-    ])('should convert "%s" to "%s"', (input, expected) => {
-      const actual = stripPathFromMatchPattern(input);
-      expect(actual).toEqual(expected);
     });
   });
 });

@@ -63,15 +63,13 @@ export function stripPathFromMatchPattern(pattern: string) {
 export function isSpaContentScript(
   options: ContentScriptEntrypoint['options'],
 ): boolean {
-  return !!(options as { spa?: unknown }).spa;
+  return !!options.spa;
 }
 
 /**
- * The match patterns the _browser_ should register the content script against.
- *
- * Normally this is just `options.matches`. For SPA content scripts, the path is
- * stripped so the script is loaded once for the whole origin - the real
- * patterns are re-checked at runtime by the SPA handler on every navigation.
+ * The match patterns the browser registers the content script against. For SPA
+ * scripts the path is stripped, so the script loads once for the whole origin
+ * and the SPA handler re-checks the real patterns at runtime.
  */
 export function getRegisteredMatches(
   options: ContentScriptEntrypoint['options'],

@@ -230,7 +230,7 @@ describe('SPA Content Script', () => {
     ).rejects.toThrow('requires at least one match pattern');
   });
 
-  it('should not let a crash in main stop future navigations from being handled', async () => {
+  it('should keep handling URL changes after main crashes', async () => {
     setUrl('https://www.youtube.com/watch?v=1');
     const main = vi
       .fn()

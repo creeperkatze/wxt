@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import {
   getRegisteredMatches,
+  stripPathFromMatchPattern,
   hashContentScriptOptions,
   mapWxtOptionsToContentScript,
   mapWxtOptionsToRegisteredContentScript,
@@ -103,6 +104,18 @@ describe('Content Script Utils', () => {
       });
 
       expect(hash1).toBe(hash2);
+    });
+  });
+
+  describe('stripPathFromMatchPattern', () => {
+    it.each([
+      ['<all_urls>', '<all_urls>'],
+      ['*://play.google.com/books/*', '*://play.google.com/*'],
+      ['*://*/*', '*://*/*'],
+      ['https://github.com/wxt-dev/*', 'https://github.com/*'],
+    ])('should convert "%s" to "%s"', (input, expected) => {
+      const actual = stripPathFromMatchPattern(input);
+      expect(actual).toEqual(expected);
     });
   });
 });

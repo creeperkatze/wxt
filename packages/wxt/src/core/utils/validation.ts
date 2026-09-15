@@ -53,7 +53,7 @@ function validateContentScriptEntrypoint(
         type: 'error',
         message:
           '`spa` is experimental. Set `experimental: { spaContentScripts: true }` in your `wxt.config.ts` to use it',
-        value: true,
+        value: options.spa,
         entrypoint: definition,
       });
     }

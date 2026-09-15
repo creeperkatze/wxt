@@ -647,8 +647,6 @@ function addHostPermission(
   manifest.host_permissions.push(hostPermission);
 }
 
-export { stripPathFromMatchPattern } from './content-scripts';
-
 /**
  * Converts all MV3 web accessible resources to their MV2 forms. MV3 web
  * accessible resources are generated in this file, and may be defined by the

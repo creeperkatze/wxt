@@ -1,7 +1,7 @@
 import definition from 'virtual:user-content-script-isolated-world-spa-entrypoint';
 import { logger } from '../utils/internal/logger';
-import { runSpaContentScript } from '../utils/internal/spa-content-script';
 import { ContentScriptContext } from 'wxt/utils/content-script-context';
+import { runSpaContentScript } from '../utils/internal/spa-content-script';
 import { initPlugins } from 'virtual:wxt-plugins';
 
 // Separate from `content-script-isolated-world` so non-SPA content scripts
