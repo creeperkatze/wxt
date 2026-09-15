@@ -705,10 +705,6 @@ See the [API Reference](/api/reference/wxt/utils/content-script-ui/types/interfa
 
 ## Dealing with SPAs
 
-:::warning Experimental
-The `spa` option described below is experimental. It's opt-in, and its API may change or be removed in any minor release. Feedback is welcome in [#1029](https://github.com/wxt-dev/wxt/issues/1029).
-:::
-
 It is difficult to write content scripts for SPAs (single page applications) and websites using HTML5 history mode for navigation because content scripts are only ran on full page reloads. SPAs and websites that take advantage of HTML5 history mode **_do not perform a full reload when changing paths_**, and thus your content script isn't going to be ran when you expect it to be.
 
 Let's look at an example. Say you want to add a UI to YouTube when watching a video:
@@ -730,30 +726,13 @@ function mountUi(ctx: ContentScriptContext): void {
 
 You're only going to see "YouTube content script loaded" when reloading the watch page or when navigating directly to it from another website.
 
-To get around this, you'll need to manually listen for the path to change and run your content script when the URL matches what you expect it to match.
-
-```ts
-const watchPattern = new MatchPattern('*://*.youtube.com/watch*');
-
-export default defineContentScript({
-  matches: ['*://*.youtube.com/*'],
-  main(ctx) {
-    ctx.addEventListener(window, 'wxt:locationchange', ({ newUrl }) => {
-      if (watchPattern.includes(newUrl)) mainWatch(ctx);
-    });
-  },
-});
-
-function mainWatch(ctx: ContentScriptContext) {
-  mountUi(ctx);
-}
-```
-
-But notice what this doesn't do: `mainWatch` is handed the _same_ `ctx` every time. That `ctx` is only invalidated when the extension reloads, so nothing you registered on it - listeners, timers, mounted UIs - is cleaned up when the user navigates to a different video, or away from `/watch` entirely. You have to manage that yourself.
-
 ### `spa: true`
 
-Set `spa: true` and WXT does all of the above for you:
+:::warning Experimental
+`spa` is experimental. It's opt-in, and its API may change or be removed in any minor release. Feedback is welcome in [#1029](https://github.com/wxt-dev/wxt/issues/1029).
+:::
+
+WXT can handle this for you. Enable the experimental flag, then set `spa: true` on the entrypoint:
 
 ```ts [wxt.config.ts]
 export default defineConfig({
@@ -815,3 +794,26 @@ export default defineContentScript({
 - `includeGlobs` and `excludeGlobs` can't be combined with `spa`. The browser applies globs when the document loads, so they'd stop the script loading on pages the user can navigate to. Use `matches`/`excludeMatches` instead.
 - URL changes use the [Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_API) where available, falling back to polling once a second. On the polling path `main` can run up to a second late. Either way it runs after the navigation commits, so `location.href` describes the new page.
 - Route changes aren't always enough. Sites that re-render without navigating can still remove the element your UI was anchored to. Use [`autoMount`](#mounting-ui-to-dynamic-element) or a `MutationObserver` inside `main`, which gets torn down with the context.
+
+### Handling URL changes manually
+
+If you'd rather not use an experimental option, or you need more control than `spa` gives you, listen for URL changes yourself and run your code when the URL matches:
+
+```ts
+const watchPattern = new MatchPattern('*://*.youtube.com/watch*');
+
+export default defineContentScript({
+  matches: ['*://*.youtube.com/*'],
+  main(ctx) {
+    ctx.addEventListener(window, 'wxt:locationchange', ({ newUrl }) => {
+      if (watchPattern.includes(newUrl)) mainWatch(ctx);
+    });
+  },
+});
+
+function mainWatch(ctx: ContentScriptContext) {
+  mountUi(ctx);
+}
+```
+
+Note that `mainWatch` is handed the _same_ `ctx` every time. It's only invalidated when the extension reloads, so nothing you registered on it - listeners, timers, mounted UIs - is cleaned up when the user navigates to a different video or away from `/watch`. Managing that is up to you, and it's the main thing `spa` does for you.
